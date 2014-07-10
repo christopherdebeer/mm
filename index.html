@@ -27,10 +27,26 @@
  
   <script>
 
-    avg = function(arr) {
-      return _.reduce(arr, function(memo, num) {
-          return memo + num;
-        }, 0) / arr.length;
+      avg = function(arr) {
+        return _.reduce(arr, function(memo, num) {
+            return memo + num;
+          }, 0) / arr.length;
+      }
+
+      function simple_moving_averager(period) {
+        var nums = [];
+        return function(num) {
+            nums.push(num);
+            if (nums.length > period)
+                nums.splice(0,1);  // remove the first element of the array
+            var sum = 0;
+            for (var i in nums)
+                sum += nums[i];
+            var n = period;
+            if (nums.length < period)
+                n = nums.length;
+            return(sum/n);
+        }
     }
    
     var graph = new Rickshaw.Graph.JSONP( {
@@ -54,9 +70,12 @@
         dataURL: '/data',
         onData: function(data) {
 
-          avg_spread = avg( _.map( data, function(d){ return d.spread.percent }) );
+          var avg_spread = avg( _.map( data, function(d){ return d.spread.percent }) );
           console.log( 'average spread: ', avg_spread )
           $('#spread_avg').html( avg_spread )
+
+          var sma6 = simple_moving_averager(6);
+          data = _.map( data, function(d){ d.spread.sma6 = sma6(d.spread.percent); return d; })
 
           return [{
               name: 'spread',
@@ -79,7 +98,7 @@
               data: _.map( data, function(d){
                 return {
                   x: d.time,
-                  y: avg_spread
+                  y: d.spread.sma6
                 };
               })
           }];
@@ -115,13 +134,16 @@
         dataURL: '/data',
         onData: function(data) {
 
-          avg_bid = avg( _.map( data, function(d){ return d.bid.val }) );
+          var avg_bid = avg( _.map( data, function(d){ return d.bid.val }) );
           console.log( 'average bid: ', avg_bid )
           $('#bid_avg').html( avg_bid )
 
-          avg_ask = avg( _.map( data, function(d){ return d.ask.val }) );
+          var avg_ask = avg( _.map( data, function(d){ return d.ask.val }) );
           console.log( 'average ask: ', avg_ask )
           $('#ask_avg').html( avg_ask )
+
+
+
 
           return [{
               name: 'bid',
