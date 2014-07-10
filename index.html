@@ -9,10 +9,29 @@
   </head>
   <body>
 
-  <div id="chart1"></div>
-  <div id="chart2"></div> 
+  <style>
+    .chart {
+      border: 4px solid #ccc;
+      margin-bottom: 2em;
+    }
+  </style>
+
+  <div id="chart1" class="chart"></div>
+  <div>
+    spread avg: <span id="spread_avg"></span>
+  </div>
+  <div id="chart2" class="chart"></div>
+  <div>
+    bid avg: <span id="bid_avg"></span> ask_avg: <span id="ask_avg"></span>
+  </div>
  
-  <script> 
+  <script>
+
+    avg = function(arr) {
+      return _.reduce(arr, function(memo, num) {
+          return memo + num;
+        }, 0) / arr.length;
+    }
    
     var graph = new Rickshaw.Graph.JSONP( {
         element: document.querySelector("#chart1"), 
@@ -20,16 +39,24 @@
         height: 300,
         renderer: 'multi',
         series: [{
-          color: 'green', 
+          color: 'blue', 
           name: 'spread',
           renderer: 'line',
         },{
-          color: 'blue', 
+          color: '#cccccc', 
           name: 'ideal',
+          renderer: 'line',
+        },{
+          color: '#333333', 
+          name: 'avg',
           renderer: 'line',
         }],
         dataURL: '/data',
         onData: function(data) {
+
+          avg_spread = avg( _.map( data, function(d){ return d.spread.percent }) );
+          console.log( 'average spread: ', avg_spread )
+          $('#spread_avg').html( avg_spread )
 
           return [{
               name: 'spread',
@@ -45,6 +72,14 @@
                 return {
                   x: d.time,
                   y: 0.5
+                };
+              })
+          },{
+              name: 'avg',
+              data: _.map( data, function(d){
+                return {
+                  x: d.time,
+                  y: avg_spread
                 };
               })
           }];
@@ -69,6 +104,10 @@
           name: 'bid',
           renderer: 'line',
         },{
+          color: 'gray', 
+          name: 'zero',
+          renderer: 'line',
+        },{
           color: 'red', 
           name: 'ask',
           renderer: 'line',
@@ -76,12 +115,20 @@
         dataURL: '/data',
         onData: function(data) {
 
+          avg_bid = avg( _.map( data, function(d){ return d.bid.val }) );
+          console.log( 'average bid: ', avg_bid )
+          $('#bid_avg').html( avg_bid )
+
+          avg_ask = avg( _.map( data, function(d){ return d.ask.val }) );
+          console.log( 'average ask: ', avg_ask )
+          $('#ask_avg').html( avg_ask )
+
           return [{
               name: 'bid',
               data: _.map( data, function(d){
                 return {
                   x: d.time,
-                  y: d.bid.val
+                  y: avg_bid - d.bid.val + 5
                 };
               })
           },{
@@ -89,7 +136,15 @@
               data: _.map( data, function(d){
                 return {
                   x: d.time,
-                  y: d.ask.val
+                  y: avg_ask - d.ask.val + 5
+                };
+              })
+          },{
+              name: 'zero',
+              data: _.map( data, function(d){
+                return {
+                  x: d.time,
+                  y: 5
                 };
               })
           }];
