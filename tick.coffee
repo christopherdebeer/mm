@@ -1,5 +1,8 @@
 Bitstamp = require 'bitstamp'
 _ = require 'underscore'
+brain = require 'brain'
+net = new brain.NeuralNetwork()
+
 b = new Bitstamp()
 
 time = parseInt process.argv[process.argv.length - 1]
@@ -16,6 +19,22 @@ btc_balance = 1
 usd_balance = 0
 
 DATA = []
+SMA = 30
+
+simple_moving_averager = (period) ->
+  nums = []
+  (num) ->
+    nums.push( num )
+    nums.splice( 0, 1 ) if nums.length > period        
+    sum = 0
+    sum += nums[i] for i in nums        
+    n = period
+    n = nums.length if nums.length < period
+    sum/n
+
+sma_bid = simple_moving_averager( SMA )
+sma_ask = simple_moving_averager( SMA )
+sma_spread = simple_moving_averager( SMA )
 
 massage_data = (err, data) ->
 
@@ -24,18 +43,27 @@ massage_data = (err, data) ->
   [bid, bid_vol] = data.bids[0].map parseFloat
   [ask, ask_vol] = data.asks[0].map parseFloat
 
+
+  PREVIOUS_DATA = DATA[ DATA.length - 1 ]
+
   result =
     time: Date.now()
     bid:
       val: bid
       vol: bid_vol
+      sma: sma_bid( bid )
+      up: PREVIOUS_DATA?.bid < bid
     ask:
       val: ask
       vol: ask_vol
+      sma: sma_ask( ask )
+      up: PREVIOUS_DATA?.ask < ask
     spread:
       val:  ask - bid
       vol: _.min [bid_vol, ask_vol]
       percent: (ask - bid) / ask * 100
+      sma: sma_spread( (ask - bid) / ask * 100 )
+      up: PREVIOUS_DATA?.spread.val < ask - bid
 
   if result.spread.percent > max_spread
     max_spread = result.spread.percent
@@ -55,6 +83,11 @@ ppb = (price) -> price / bits_ber_btc
 time_now = ->
   date = new Date()
   date.toString().replace( /GMT.*$/, '' )
+
+
+
+
+
 
 trade = ({bid, ask, spread}) -> 
 
@@ -77,6 +110,12 @@ trade = ({bid, ask, spread}) ->
 
 tick()
 
+
+
+
+
+
+# Server serves DATA
 
 http = require 'http'
 url = require 'url'

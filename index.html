@@ -15,7 +15,7 @@
       margin-bottom: 2em;
     }
   </style>
-
+  <div id="chart0" class="chart"></div>
   <div id="chart1" class="chart"></div>
   <div>
     spread avg: <span id="spread_avg"></span>
@@ -24,6 +24,8 @@
   <div>
     bid avg: <span id="bid_avg"></span> ask_avg: <span id="ask_avg"></span>
   </div>
+
+  <div id="chart3" class="chart"></div>
  
   <script>
 
@@ -32,6 +34,37 @@
             return memo + num;
           }, 0) / arr.length;
       }
+
+
+      var graph = new Rickshaw.Graph.JSONP( {
+        element: document.querySelector("#chart0"), 
+        width: 1000, 
+        height: 300,
+        renderer: 'multi',
+        series: [{
+          color: 'green', 
+          name: 'price',
+          renderer: 'line',
+        }],
+        dataURL: '/data',
+        onData: function(data) {
+
+          return [{
+              name: 'price',
+              data: _.map( data, function(d){
+                return {
+                  x: d.time,
+                  y: ( d.bid.val + d.ask.val ) / 2
+                };
+              })
+          }];
+        },
+        onComplete: function(transport) {
+          var graph = transport.graph;
+          var detail = new Rickshaw.Graph.HoverDetail({ graph: graph });
+          var axes = new Rickshaw.Graph.Axis.Time( { graph: graph } );
+        }
+    });
 
       function simple_moving_averager(period) {
         var nums = [];
@@ -51,7 +84,7 @@
    
     var graph = new Rickshaw.Graph.JSONP( {
         element: document.querySelector("#chart1"), 
-        width: document.clientWidth, 
+        width: 1000, 
         height: 300,
         renderer: 'multi',
         series: [{
@@ -63,8 +96,8 @@
           name: 'ideal',
           renderer: 'line',
         },{
-          color: '#333333', 
-          name: 'avg',
+          color: 'rgba( 0, 0, 255, 0.2)', 
+          name: 'sma',
           renderer: 'line',
         }],
         dataURL: '/data',
@@ -74,8 +107,8 @@
           console.log( 'average spread: ', avg_spread )
           $('#spread_avg').html( avg_spread )
 
-          var sma6 = simple_moving_averager(6);
-          data = _.map( data, function(d){ d.spread.sma6 = sma6(d.spread.percent); return d; })
+          var sma = simple_moving_averager(60);
+          data = _.map( data, function(d){ d.spread.sma = sma(d.spread.percent); return d; })
 
           return [{
               name: 'spread',
@@ -94,11 +127,11 @@
                 };
               })
           },{
-              name: 'avg',
+              name: 'sma',
               data: _.map( data, function(d){
                 return {
                   x: d.time,
-                  y: d.spread.sma6
+                  y: d.spread.sma
                 };
               })
           }];
@@ -115,7 +148,7 @@
 
     var graph = new Rickshaw.Graph.JSONP( {
         element: document.querySelector("#chart2"), 
-        width: document.clientWidth, 
+        width: 1000, 
         height: 300,
         renderer: 'multi',
         series: [{
@@ -150,7 +183,7 @@
               data: _.map( data, function(d){
                 return {
                   x: d.time,
-                  y: avg_bid - d.bid.val + 5
+                  y: d.bid.val - 600
                 };
               })
           },{
@@ -158,7 +191,7 @@
               data: _.map( data, function(d){
                 return {
                   x: d.time,
-                  y: avg_ask - d.ask.val + 5
+                  y: d.ask.val - 600
                 };
               })
           },{
@@ -166,7 +199,73 @@
               data: _.map( data, function(d){
                 return {
                   x: d.time,
-                  y: 5
+                  y: 0
+                };
+              })
+          }];
+        },
+        onComplete: function(transport) {
+          var graph = transport.graph;
+          var detail = new Rickshaw.Graph.HoverDetail({ graph: graph });
+          var axes = new Rickshaw.Graph.Axis.Time( { graph: graph } );
+        }
+    });
+
+
+  var graph = new Rickshaw.Graph.JSONP( {
+        element: document.querySelector("#chart3"), 
+        width: 1000, 
+        height: 300,
+        renderer: 'multi',
+        series: [{
+          color: 'green', 
+          name: 'bid_vol',
+          renderer: 'line',
+        },{
+          color: 'gray', 
+          name: 'zero',
+          renderer: 'line',
+        },{
+          color: 'red', 
+          name: 'ask_vol',
+          renderer: 'line',
+        }],
+        dataURL: '/data',
+        onData: function(data) {
+
+          var avg_bid = avg( _.map( data, function(d){ return d.bid.val }) );
+          console.log( 'average bid: ', avg_bid )
+          $('#bid_avg').html( avg_bid )
+
+          var avg_ask = avg( _.map( data, function(d){ return d.ask.val }) );
+          console.log( 'average ask: ', avg_ask )
+          $('#ask_avg').html( avg_ask )
+
+
+
+
+          return [{
+              name: 'bid_vol',
+              data: _.map( data, function(d){
+                return {
+                  x: d.time,
+                  y: d.bid.vol
+                };
+              })
+          },{
+              name: 'ask_vol',
+              data: _.map( data, function(d){
+                return {
+                  x: d.time,
+                  y: d.ask.vol
+                };
+              })
+          },{
+              name: 'zero',
+              data: _.map( data, function(d){
+                return {
+                  x: d.time,
+                  y: 0
                 };
               })
           }];

@@ -13,6 +13,7 @@
   "dependencies": {
     "bitstamp": "~0.1.5",
     "underscore": "~1.6.0",
-    "node-static": "~0.7.3"
+    "node-static": "~0.7.3",
+    "brain": "~0.7.0"
   }
 }
